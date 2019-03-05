@@ -9,7 +9,8 @@ from sklearn.ensemble import RandomForestClassifier
 from sklearn.cross_validation import KFold   #from sklearn.model_selection import KFold
 
 from sklearn.linear_model import LogisticRegression
-from sklearn import datasets
+from sklearn.naive_bayes import GaussianNB
+
 
 
 # RANDOM FOREST
@@ -33,6 +34,11 @@ from sklearn import datasets
 # Mean Absolute Test Error: 0.33 degrees.
 # Test Accuracy: 66.67 %.
 
+# NAIVE BAYES
+# Mean Absolute Train Error: 0.38 degrees.
+# Train Accuracy: 62.46 %.
+# Mean Absolute Test Error: 0.37 degrees.
+# Test Accuracy: 63.06 %.
 
 
 filename= "data.csv"
@@ -211,6 +217,15 @@ def run_LogisticRegression(train, train_y, test):
 
     return pred_train, pred_test
 
+def run_NaiveBayes(train, train_y, test):
+    gnb = GaussianNB()
+    gnb.fit (train, train_y)
+
+    pred_train = gnb.predict(train)
+    pred_test = gnb.predict(test)
+
+    return pred_train, pred_test
+
 def predictions_result(pred_train, train_y, pred_test, test_y):
     # Calculate the absolute errors
     errors = abs(pred_train - train_y)
@@ -244,5 +259,6 @@ if __name__ == '__main__':
     train, train_y, test, test_y = split_data(raw, df, indexOfNull)
     # best_n, best_m = find_RandomForest_parameters(train)
     # pred_train, pred_test = run_RandomForest(train, train_y, test, best_n, best_m)
-    pred_train, pred_test = run_LogisticRegression(train, train_y, test)
+    # pred_train, pred_test = run_LogisticRegression(train, train_y, test)
+    pred_train, pred_test = run_NaiveBayes(train, train_y, test)
     predictions_result(pred_train, train_y, pred_test, test_y)
