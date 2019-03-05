@@ -8,9 +8,11 @@ import matplotlib.pyplot as plt
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.cross_validation import KFold   #from sklearn.model_selection import KFold
 
+from sklearn.linear_model import LogisticRegression
+from sklearn import datasets
 
 
-
+# RANDOM FOREST
 # best_n: 100
 # best_m: 10
 #
@@ -19,6 +21,17 @@ from sklearn.cross_validation import KFold   #from sklearn.model_selection impor
 # Mean Absolute Test Error: 0.33 degrees.
 # Test Accuracy: 67.08 %.
 
+# LOGISTIC REGRESSION
+# solver = liblinear
+# Mean Absolute Train Error: 0.32 degrees.
+# Train Accuracy: 68.32 %.
+# Mean Absolute Test Error: 0.32 degrees.
+# Test Accuracy: 67.81 %.
+# solver = lbfgs
+# Mean Absolute Train Error: 0.32 degrees.
+# Train Accuracy: 67.83 %.
+# Mean Absolute Test Error: 0.33 degrees.
+# Test Accuracy: 66.67 %.
 
 
 
@@ -189,6 +202,15 @@ def run_RandomForest(train, train_y, test, best_n, best_m):
     return pred_train, pred_test
 
 
+def run_LogisticRegression(train, train_y, test):
+    logreg = LogisticRegression(solver='lbfgs', multi_class='ovr')
+    logreg.fit(train, train_y)
+
+    pred_train = logreg.predict(train)
+    pred_test = logreg.predict(test)
+
+    return pred_train, pred_test
+
 def predictions_result(pred_train, train_y, pred_test, test_y):
     # Calculate the absolute errors
     errors = abs(pred_train - train_y)
@@ -220,6 +242,7 @@ MAIN
 if __name__ == '__main__':
     raw, df, indexOfNull = process_data()
     train, train_y, test, test_y = split_data(raw, df, indexOfNull)
-    best_n, best_m = find_RandomForest_parameters(train)
-    pred_train, pred_test = run_RandomForest(train, train_y, test, best_n, best_m)
+    # best_n, best_m = find_RandomForest_parameters(train)
+    # pred_train, pred_test = run_RandomForest(train, train_y, test, best_n, best_m)
+    pred_train, pred_test = run_LogisticRegression(train, train_y, test)
     predictions_result(pred_train, train_y, pred_test, test_y)
