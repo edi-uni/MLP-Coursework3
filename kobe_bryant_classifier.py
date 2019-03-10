@@ -58,7 +58,9 @@ def process_data():
         raw.set_value(row.Index, 'seconds_remaining', row.seconds_remaining + row.minutes_remaining * 60)
 
     # raw = raw.drop(columns='minutes_remaining')
+    unsorted_raw = raw
     raw = raw.sort_values(['season', 'shot_id'], ascending=[True, True])
+
 
 
     # drops = ['shot_id', 'team_id', 'team_name', 'shot_zone_area', 'shot_zone_range', 'shot_zone_basic', \
@@ -81,11 +83,12 @@ def process_data():
 
     # raw.to_csv("data_processed.csv", sep=',')
 
-    return raw
+    return raw, unsorted_raw
 
 
-def experiments_split(raw):
-    seasons_dict = {k: v for k, v in raw.groupby('season')}
+def split_for_experiments(raw):
+    df = raw[pd.notnull(raw['shot_made_flag'])]
+    seasons_dict = {k: v for k, v in df.groupby('season')}
 
     seasons_loc_dict = {}
     for k, v in seasons_dict.items():
@@ -100,7 +103,28 @@ def experiments_split(raw):
     return seasons_dict, seasons_loc_dict, seasons_mode_dict
 
 
-def split_data(raw):
+def split_in_blocks(seasons_dict):
+    seasons_blocks_dict = {}
+    test = 0
+    for k, v in seasons_dict.items():
+        block_dim = len(v.index) // 10
+        blocks = []
+        for i in range(10):
+            start = i * block_dim
+            end = (i + 1) * block_dim
+
+            if i != 9:
+                block = v.iloc[start:end]
+            else:
+                block = v.iloc[start:]
+
+            blocks.append(block)
+        seasons_blocks_dict[k] = blocks
+
+    return seasons_blocks_dict
+
+
+def get_all_testing_points(raw):
     df = raw[pd.notnull(raw['shot_made_flag'])]
     indexOfNull = raw[raw['shot_made_flag'].isnull()].index.tolist()
 
@@ -128,18 +152,69 @@ def split_data(raw):
         n[z] = c
         m=m-1;
 
+    return n
 
+def split_data(block, all_points):
+    block = block.drop('season', 1)
+    indices = block.index.tolist()
+    test_points = np.intersect1d(indices, all_points)
 
-    test_comp = raw.iloc[n]
+    # n =[i for i in test_points]
+    #
+    # print (n)
+
+    test_comp = block.loc[test_points]
     test = test_comp.drop('shot_made_flag', 1)
     test_y = test_comp['shot_made_flag']
-    df = raw.drop(raw.index[n])
+    df = block.drop(test_points)
     df= df[pd.notnull(df['shot_made_flag'])]
-    # separate df into explanatory and response variables
     train = df.drop('shot_made_flag', 1)
     train_y = df['shot_made_flag']
 
     return train, train_y, test, test_y
+
+
+
+# def split_data(raw):
+#     df = raw[pd.notnull(raw['shot_made_flag'])]
+#     indexOfNull = raw[raw['shot_made_flag'].isnull()].index.tolist()
+#
+#     per_test =  round((15 * len(df))/100)
+#     n =[0 for i in range(per_test)]
+#
+#     m = len(indexOfNull)-1
+#     for z in range(per_test):
+#         c = indexOfNull[m]+1
+#
+#         if c not in raw.index:      # check the end of the chunk
+#             break
+#
+#         x = raw.iloc[c]
+#         #print(pd.notnull(x['shot_made_flag']))
+#         flg = 0
+#         if(pd.isnull(x['shot_made_flag'])):
+#             #print(c)
+#             flg =1
+#             while flg==1:
+#                 c = c+1
+#                 x = raw.iloc[c]
+#                 if pd.notnull(x['shot_made_flag']):
+#                     flg =0
+#         n[z] = c
+#         m=m-1;
+#
+#
+#
+#     test_comp = raw.iloc[n]
+#     test = test_comp.drop('shot_made_flag', 1)
+#     test_y = test_comp['shot_made_flag']
+#     df = raw.drop(raw.index[n])
+#     df= df[pd.notnull(df['shot_made_flag'])]
+#     # separate df into explanatory and response variables
+#     train = df.drop('shot_made_flag', 1)
+#     train_y = df['shot_made_flag']
+#
+#     return train, train_y, test, test_y
 
 
 
@@ -286,16 +361,35 @@ def predictions_result(pred_train, train_y, pred_test, test_y):
     print('Test Accuracy:', round(accuracy1, 2), '%.')
 
 
+
 '''
 MAIN
 '''
+'''
 if __name__ == '__main__':
-    raw = process_data()
-    seasons_dict, seasons_loc_dict, seasons_mode_dict = experiments_split(raw)
-    # print (seasons_mode_dict)
-    for k,v in seasons_mode_dict.items():
-        if k[1] == 1:
-            print (k)
+    raw, unsorted_raw = process_data()
+    seasons_dict, seasons_loc_dict, seasons_mode_dict = split_for_experiments(raw)
+    seasons_blocks_dict = split_in_blocks(seasons_dict)
+    # print(seasons_blocks_dict)
+
+
+    all_points = get_all_testing_points(unsorted_raw)
+    # print(all_points)
+
+
+
+
+
+    ## KOMAL: - you have to do something like this in order to get the sets for a block
+    ##        - this is just for the first block from the first season
+    for k,v in seasons_blocks_dict.items():
+        train, train_y, test, test_y = split_data(v[0], all_points)
+        print(train, train_y, test, test_y)
+        break
+
+
+
+
     # train, train_y, test, test_y = split_data(raw)
     # best_n, best_m = find_RandomForest_parameters(train)
     # pred_train, pred_test = run_RandomForest(train, train_y, test, best_n, best_m)
@@ -305,3 +399,10 @@ if __name__ == '__main__':
     # pred_train, pred_test = run_NaiveBayes(train, train_y, test)
 
     # predictions_result(pred_train, train_y, pred_test, test_y)
+'''
+
+
+raw, unsorted_raw = process_data()
+seasons_dict, seasons_loc_dict, seasons_mode_dict = split_for_experiments(raw)
+seasons_blocks_dict = split_in_blocks(seasons_dict)
+all_points = get_all_testing_points(unsorted_raw)
