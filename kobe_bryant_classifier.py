@@ -103,25 +103,79 @@ def split_for_experiments(raw):
     return seasons_dict, seasons_loc_dict, seasons_mode_dict
 
 
-def split_in_blocks(seasons_dict):
-    seasons_blocks_dict = {}
-    test = 0
-    for k, v in seasons_dict.items():
-        block_dim = len(v.index) // 10
-        blocks = []
-        for i in range(10):
-            start = i * block_dim
-            end = (i + 1) * block_dim
+def split_in_blocks(seasons_dict, type):
+    blocks_dict = {}
 
-            if i != 9:
-                block = v.iloc[start:end]
+    if type == 'season':
+        for k, v in seasons_dict.items():
+            block_dim = len(v.index) // 10
+            blocks = []
+            for i in range(10):
+                start = i * block_dim
+                end = (i + 1) * block_dim
+
+                if i != 9:
+                    block = v.iloc[start:end]
+                else:
+                    block = v.iloc[start:]
+
+                blocks.append(block)
+            blocks_dict[k] = blocks
+    elif type == 'location':
+        home = []
+        away = []
+        for k, v in seasons_dict.items():
+            block_dim = len(v.index) // 5
+            blocks = []
+            for i in range(5):
+                start = i * block_dim
+                end = (i + 1) * block_dim
+
+                if i != 4:
+                    block = v.iloc[start:end]
+                else:
+                    block = v.iloc[start:]
+
+                blocks.append(block)
+
+            if k[1] == 1:
+                home += blocks
             else:
-                block = v.iloc[start:]
+                away += blocks
 
-            blocks.append(block)
-        seasons_blocks_dict[k] = blocks
+        blocks_dict['home'] = home
+        blocks_dict['away'] = away
+    elif type == 'mode':
+        season = []
+        playoff = []
+        for k, v in seasons_dict.items():
+            if k[1] == 1:
+                n = 2
+            else:
+                n = 8
 
-    return seasons_blocks_dict
+            block_dim = len(v.index) // n
+            blocks = []
+            for i in range(n):
+                start = i * block_dim
+                end = (i + 1) * block_dim
+
+                if i != n-1:
+                    block = v.iloc[start:end]
+                else:
+                    block = v.iloc[start:]
+
+                blocks.append(block)
+
+            if k[1] == 1:
+                playoff += blocks
+            else:
+                season += blocks
+
+        blocks_dict['playoff'] = playoff
+        blocks_dict['season'] = season
+
+    return blocks_dict
 
 
 def get_all_testing_points(raw):
@@ -154,8 +208,14 @@ def get_all_testing_points(raw):
 
     return n
 
-def split_data(block, all_points):
+def split_data(block, all_points, type):
     block = block.drop('season', 1)
+
+    if type == 'location':
+        block = block.drop('matchup', 1)
+    elif type == 'mode':
+        block = block.drop('playoffs', 1)
+
     indices = block.index.tolist()
     test_points = np.intersect1d(indices, all_points)
 
@@ -369,7 +429,9 @@ MAIN
 if __name__ == '__main__':
     raw, unsorted_raw = process_data()
     seasons_dict, seasons_loc_dict, seasons_mode_dict = split_for_experiments(raw)
-    seasons_blocks_dict = split_in_blocks(seasons_dict)
+    seasons_blocks_dict = split_in_blocks(seasons_dict, 'season')
+    seasons_loc_blocks_dict = split_in_blocks(seasons_loc_dict, 'location')
+    seasons_mode_blocks_dict = split_in_blocks(seasons_mode_dict, 'mode')
     # print(seasons_blocks_dict)
 
 
@@ -382,12 +444,23 @@ if __name__ == '__main__':
 
     ## KOMAL: - you have to do something like this in order to get the sets for a block
     ##        - this is just for the first block from the first season
-    for k,v in seasons_blocks_dict.items():
-        train, train_y, test, test_y = split_data(v[0], all_points)
-        print(train, train_y, test, test_y)
-        break
+    # for season
+    # for k,v in seasons_blocks_dict.items():
+    #     train, train_y, test, test_y = split_data(v[0], all_points, 'season')
+    #     print(train, train_y, test, test_y)
+    #     break
 
+    # for home&away
+    # for k,v in seasons_loc_blocks_dict.items():
+    #     train, train_y, test, test_y = split_data(v[0], all_points, 'location')
+    #     print(train, train_y, test, test_y)
+    #     break
 
+    # for season&playoff
+    # for k,v in seasons_mode_blocks_dict.items():
+    #     train, train_y, test, test_y = split_data(v[0], all_points, 'mode')
+    #     print(train, train_y, test, test_y)
+    #     break
 
 
     # train, train_y, test, test_y = split_data(raw)
@@ -404,5 +477,7 @@ if __name__ == '__main__':
 
 raw, unsorted_raw = process_data()
 seasons_dict, seasons_loc_dict, seasons_mode_dict = split_for_experiments(raw)
-seasons_blocks_dict = split_in_blocks(seasons_dict)
+seasons_blocks_dict = split_in_blocks(seasons_dict, 'season')
 all_points = get_all_testing_points(unsorted_raw)
+
+# print(seasons_blocks_dict)
