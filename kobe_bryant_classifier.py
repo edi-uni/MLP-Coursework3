@@ -48,20 +48,6 @@ shot_zone_area_dict = {'Center(C)': 1, 'Left Side(L)': 4, 'Right Side(R)': 4, 'L
 
 def process_data():
     raw = pd.read_csv(filename)
-    # drops = ['shot_id', 'team_id', 'team_name', 'shot_zone_area', 'shot_zone_range', 'shot_zone_basic', \
-             # 'matchup', 'game_event_id', 'game_id', 'game_date']
-    # drops = ['team_id', 'team_name', 'matchup', 'game_id', 'game_date']
-    drops = ['team_id', 'team_name', 'game_event_id', 'game_id', 'game_date', 'shot_id']
-    for drop in drops:
-        raw = raw.drop(drop, 1)
-
-    # categorical_vars = ['action_type', 'combined_shot_type', 'shot_type', 'opponent', 'season']
-    # categorical_vars = ['action_type', 'combined_shot_type', 'shot_type', 'opponent', 'season', 'shot_id', 'shot_zone_area', 'shot_zone_range', 'shot_zone_basic', \
-    #          'matchup', 'game_event_id', 'game_date']
-    categorical_vars = ['action_type', 'combined_shot_type', 'shot_type', 'shot_zone_area', 'shot_zone_range', 'shot_zone_basic', 'opponent', 'season']
-    for var in categorical_vars:
-        raw = pd.concat([raw, pd.get_dummies(raw[var], prefix=var)], 1)
-        raw = raw.drop(var, 1)
 
     for i, row in enumerate(raw.itertuples(), 1):
         if "@" in row.matchup:
@@ -69,19 +55,65 @@ def process_data():
         else:
             raw.set_value(row.Index, 'matchup', 1)
 
+        raw.set_value(row.Index, 'seconds_remaining', row.seconds_remaining + row.minutes_remaining * 60)
+
+    # raw = raw.drop(columns='minutes_remaining')
+    raw = raw.sort_values(['season', 'shot_id'], ascending=[True, True])
+
+
+    # drops = ['shot_id', 'team_id', 'team_name', 'shot_zone_area', 'shot_zone_range', 'shot_zone_basic', \
+             # 'matchup', 'game_event_id', 'game_id', 'game_date']
+    # drops = ['team_id', 'team_name', 'matchup', 'game_id', 'game_date']
+    drops = ['team_id', 'team_name', 'game_event_id', 'game_id', 'game_date', 'shot_id', 'minutes_remaining']
+    for drop in drops:
+        raw = raw.drop(drop, 1)
+
+    # categorical_vars = ['action_type', 'combined_shot_type', 'shot_type', 'opponent', 'season']
+    # categorical_vars = ['action_type', 'combined_shot_type', 'shot_type', 'opponent', 'season', 'shot_id', 'shot_zone_area', 'shot_zone_range', 'shot_zone_basic', \
+    #          'matchup', 'game_event_id', 'game_date']
+    categorical_vars = ['action_type', 'combined_shot_type', 'shot_type', 'shot_zone_area', 'shot_zone_range', 'shot_zone_basic', 'opponent']#, 'season'] # remove "season" when split the data
+    for var in categorical_vars:
+        raw = pd.concat([raw, pd.get_dummies(raw[var], prefix=var)], 1)
+        raw = raw.drop(var, 1)
+
+    # df = raw[pd.notnull(raw['shot_made_flag'])]
+    # indexOfNull = raw[raw['shot_made_flag'].isnull()].index.tolist()
+
+    # raw.to_csv("data_processed.csv", sep=',')
+
+    return raw
+
+
+def experiments_split(raw):
+    seasons_dict = {k: v for k, v in raw.groupby('season')}
+
+    seasons_loc_dict = {}
+    for k, v in seasons_dict.items():
+        temp_dict = {(k, k2): v2 for k2, v2 in v.groupby('matchup')}
+        seasons_loc_dict.update(temp_dict)
+
+    seasons_mode_dict = {}
+    for k, v in seasons_dict.items():
+        temp_dict = {(k, k2): v2 for k2, v2 in v.groupby('playoffs')}
+        seasons_mode_dict.update(temp_dict)
+
+    return seasons_dict, seasons_loc_dict, seasons_mode_dict
+
+
+def split_data(raw):
     df = raw[pd.notnull(raw['shot_made_flag'])]
     indexOfNull = raw[raw['shot_made_flag'].isnull()].index.tolist()
 
-    return raw, df, indexOfNull
-
-
-def split_data(raw, df, indexOfNull):
     per_test =  round((15 * len(df))/100)
     n =[0 for i in range(per_test)]
 
     m = len(indexOfNull)-1
     for z in range(per_test):
         c = indexOfNull[m]+1
+
+        if c not in raw.index:      # check the end of the chunk
+            break
+
         x = raw.iloc[c]
         #print(pd.notnull(x['shot_made_flag']))
         flg = 0
@@ -108,6 +140,9 @@ def split_data(raw, df, indexOfNull):
     train_y = df['shot_made_flag']
 
     return train, train_y, test, test_y
+
+
+
 
 
 def logloss(act, pred):
@@ -219,7 +254,7 @@ def run_LogisticRegression(train, train_y, test):
 
 def run_NaiveBayes(train, train_y, test):
     gnb = GaussianNB()
-    gnb.fit (train, train_y)
+    gnb.fit(train, train_y)
 
     pred_train = gnb.predict(train)
     pred_test = gnb.predict(test)
@@ -255,10 +290,18 @@ def predictions_result(pred_train, train_y, pred_test, test_y):
 MAIN
 '''
 if __name__ == '__main__':
-    raw, df, indexOfNull = process_data()
-    train, train_y, test, test_y = split_data(raw, df, indexOfNull)
+    raw = process_data()
+    seasons_dict, seasons_loc_dict, seasons_mode_dict = experiments_split(raw)
+    # print (seasons_mode_dict)
+    for k,v in seasons_mode_dict.items():
+        if k[1] == 1:
+            print (k)
+    # train, train_y, test, test_y = split_data(raw)
     # best_n, best_m = find_RandomForest_parameters(train)
     # pred_train, pred_test = run_RandomForest(train, train_y, test, best_n, best_m)
+
     # pred_train, pred_test = run_LogisticRegression(train, train_y, test)
-    pred_train, pred_test = run_NaiveBayes(train, train_y, test)
-    predictions_result(pred_train, train_y, pred_test, test_y)
+
+    # pred_train, pred_test = run_NaiveBayes(train, train_y, test)
+
+    # predictions_result(pred_train, train_y, pred_test, test_y)
