@@ -66,7 +66,7 @@ def process_data():
     # drops = ['shot_id', 'team_id', 'team_name', 'shot_zone_area', 'shot_zone_range', 'shot_zone_basic', \
              # 'matchup', 'game_event_id', 'game_id', 'game_date']
     # drops = ['team_id', 'team_name', 'matchup', 'game_id', 'game_date']
-    drops = ['team_id', 'team_name', 'game_event_id', 'game_id', 'game_date', 'shot_id', 'minutes_remaining']
+    drops = ['team_id', 'team_name', 'game_event_id', 'game_id', 'game_date', 'shot_id', 'minutes_remaining', 'lat', 'lon']
     for drop in drops:
         raw = raw.drop(drop, 1)
 
@@ -208,16 +208,22 @@ def get_all_testing_points(raw):
 
     return n
 
-def split_data(block, all_points, type):
-    block = block.drop('season', 1)
+def split_data(block, all_points, type='default'):
 
-    if type == 'location':
-        block = block.drop('matchup', 1)
-    elif type == 'mode':
-        block = block.drop('playoffs', 1)
+    if type == 'default':
+        block = pd.concat([block, pd.get_dummies(block['season'], prefix='season')], 1)
+        block = block.drop('season', 1)
+    else:
+        block = block.drop('season', 1)
+        if type == 'location':
+            block = block.drop('matchup', 1)
+        elif type == 'mode':
+            block = block.drop('playoffs', 1)
 
     indices = block.index.tolist()
     test_points = np.intersect1d(indices, all_points)
+    # print(indices)
+    # print(all_points)
 
     # n =[i for i in test_points]
     #
@@ -379,7 +385,7 @@ def run_RandomForest(train, train_y, test, best_n, best_m):
 
 
 def run_LogisticRegression(train, train_y, test):
-    logreg = LogisticRegression(solver='lbfgs', multi_class='ovr')
+    logreg = LogisticRegression(solver='liblinear', multi_class='ovr')
     logreg.fit(train, train_y)
 
     pred_train = logreg.predict(train)
@@ -463,7 +469,7 @@ if __name__ == '__main__':
     #     break
 
 
-    # train, train_y, test, test_y = split_data(raw)
+    # train, train_y, test, test_y = split_data(raw, all_points)
     # best_n, best_m = find_RandomForest_parameters(train)
     # pred_train, pred_test = run_RandomForest(train, train_y, test, best_n, best_m)
 
@@ -471,6 +477,8 @@ if __name__ == '__main__':
 
     # pred_train, pred_test = run_NaiveBayes(train, train_y, test)
 
+
+    # print(train)
     # predictions_result(pred_train, train_y, pred_test, test_y)
 '''
 
@@ -480,4 +488,4 @@ seasons_dict, seasons_loc_dict, seasons_mode_dict = split_for_experiments(raw)
 seasons_blocks_dict = split_in_blocks(seasons_dict, 'season')
 all_points = get_all_testing_points(unsorted_raw)
 
-# print(seasons_blocks_dict)
+print(seasons_blocks_dict)
