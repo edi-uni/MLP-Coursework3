@@ -449,29 +449,29 @@ if __name__ == '__main__':
     seasons_blocks_dict = split_in_blocks(seasons_dict, 'season')
     seasons_loc_blocks_dict = split_in_blocks(seasons_loc_dict, 'location')
     seasons_mode_blocks_dict = split_in_blocks(seasons_mode_dict, 'mode')
-    # print(seasons_blocks_dict)
 
+    print(seasons_blocks_dict.keys())
+    print(seasons_loc_blocks_dict.keys())
+    print(seasons_mode_blocks_dict.keys())
 
     all_points = get_all_testing_points(unsorted_raw)
     # print(all_points)
 
 
+    ##########
+    # dict_keys(['1996-97', '1997-98', '1998-99', '1999-00', '2000-01', '2001-02', '2002-03', '2003-04', '2004-05', '2005-06', '2006-07', '2007-08', '2008-09', '2009-10', '2010-11', '2011-12', '2012-13', '2013-14', '2014-15', '2015-16'])
+    # dict_keys(['home', 'away'])
+    # dict_keys(['playoff', 'season'])
+    ##########
 
 
 
-
-    ## KOMAL: - you have to do something like this in order to get the sets for a block
-    ##        - this is just for the first block from the first season
-    # for seasons
-
+    # for the entire data
     temp_block = pd.DataFrame()
-
     for k,v in seasons_blocks_dict.items():
         copy = v.copy()
-        # print (copy)
-        # print(copy[0].index[0], copy[9].index[40])
         for i in range(len(copy)):
-            print("BLOCK", i)
+            # print("BLOCK", i)
             # print("Original block length:", len(copy[i].index))
 
             temp_train, temp_train_y = split_by_field(temp_block)
@@ -484,26 +484,67 @@ if __name__ == '__main__':
             train_y = pd.concat([temp_train_y, train_y])
             # print("After concat length:", len(train.index), len(test.index))
             # print(train, train_y, test, test_y)
-            print(train, test)
 
             for j in test.index:
                 copy[i].xs(j)['shot_made_flag'] = #the result after prediction
 
             copy[i] = copy[i].drop('season', 1)
             temp_block = pd.concat([temp_block, copy[i]])
-        # break
+
+
+    # for seasons
+    for k,v in seasons_blocks_dict.items():
+        copy = v.copy()
+        temp_block = pd.DataFrame()
+        for i in range(len(copy)):
+            temp_train, temp_train_y = split_by_field(temp_block)
+            train, train_y, test, test_y = split_data(copy[i], all_points, 'season')
+
+            train = pd.concat([temp_train, train])
+            train_y = pd.concat([temp_train_y, train_y])
+
+            for j in test.index:
+                copy[i].xs(j)['shot_made_flag'] = #the result after prediction
+
+            copy[i] = copy[i].drop('season', 1)
+            temp_block = pd.concat([temp_block, copy[i]])
 
     # for home&away
-    # for k,v in seasons_loc_blocks_dict.items():
-    #     train, train_y, test, test_y = split_data(v[0], all_points, 'location')
-    #     print(train, train_y, test, test_y)
-    #     break
+    for k,v in seasons_loc_blocks_dict.items():
+        copy = v.copy()
+        temp_block = pd.DataFrame()
+        for i in range(len(copy)):
+            temp_train, temp_train_y = split_by_field(temp_block)
+            train, train_y, test, test_y = split_data(copy[i], all_points, 'location')
+
+            train = pd.concat([temp_train, train])
+            train_y = pd.concat([temp_train_y, train_y])
+
+            for j in test.index:
+                copy[i].xs(j)['shot_made_flag'] = #the result after prediction
+
+            copy[i] = copy[i].drop('season', 1)
+            copy[i] = copy[i].drop('matchup', 1)
+            temp_block = pd.concat([temp_block, copy[i]])
 
     # for season&playoff
-    # for k,v in seasons_mode_blocks_dict.items():
-    #     train, train_y, test, test_y = split_data(v[0], all_points, 'mode')
-    #     print(train, train_y, test, test_y)
-    #     break
+    for k,v in seasons_mode_blocks_dict.items():
+        copy = v.copy()
+        temp_block = pd.DataFrame()
+        for i in range(len(copy)):
+            temp_train, temp_train_y = split_by_field(temp_block)
+            train, train_y, test, test_y = split_data(copy[i], all_points, 'mode')
+
+            train = pd.concat([temp_train, train])
+            train_y = pd.concat([temp_train_y, train_y])
+
+            for j in test.index:
+                copy[i].xs(j)['shot_made_flag'] = #the result after prediction
+
+            copy[i] = copy[i].drop('season', 1)
+            copy[i] = copy[i].drop('playoffs', 1)
+            temp_block = pd.concat([temp_block, copy[i]])
+
 
 
     # train, train_y, test, test_y = split_data(raw, all_points)
