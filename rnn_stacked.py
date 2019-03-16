@@ -10,7 +10,7 @@ from sklearn.preprocessing import MinMaxScaler
 from sklearn.metrics import mean_squared_error
 import pandas as pd
 import kobe_bryant_classifier as kb
-
+#loss: 0.6094 - acc: 0.6793 - val_loss: 0.6062 - val_acc: 0.6817 epoch#1000
 filename= "data.csv"
 # raw = pd.read_csv(filename)
 raw, df, indexOfNull = kb.process_data()
