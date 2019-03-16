@@ -206,6 +206,8 @@ def get_all_testing_points(raw):
         n[z] = c
         m=m-1;
 
+    # print (n[0], n[3854])
+
     return n
 
 def split_data(block, all_points, type='default'):
@@ -239,6 +241,15 @@ def split_data(block, all_points, type='default'):
 
     return train, train_y, test, test_y
 
+def split_by_field(df):
+    train = pd.DataFrame()
+    train_y = pd.DataFrame()
+
+    if not df.empty:
+        train = df.drop('shot_made_flag', 1)
+        train_y = df['shot_made_flag']
+
+    return train, train_y
 
 
 # def split_data(raw):
@@ -448,13 +459,39 @@ if __name__ == '__main__':
 
 
 
+
     ## KOMAL: - you have to do something like this in order to get the sets for a block
     ##        - this is just for the first block from the first season
-    # for season
-    # for k,v in seasons_blocks_dict.items():
-    #     train, train_y, test, test_y = split_data(v[0], all_points, 'season')
-    #     print(train, train_y, test, test_y)
-    #     break
+    # for seasons
+
+    temp_block = pd.DataFrame()
+
+    for k,v in seasons_blocks_dict.items():
+        copy = v.copy()
+        # print (copy)
+        # print(copy[0].index[0], copy[9].index[40])
+        for i in range(len(copy)):
+            print("BLOCK", i)
+            # print("Original block length:", len(copy[i].index))
+
+            temp_train, temp_train_y = split_by_field(temp_block)
+
+            train, train_y, test, test_y = split_data(copy[i], all_points, 'season')
+            # print("After split length:", len(train.index), len(test.index))
+            # print(train, train_y, test, test_y)
+
+            train = pd.concat([temp_train, train])
+            train_y = pd.concat([temp_train_y, train_y])
+            # print("After concat length:", len(train.index), len(test.index))
+            # print(train, train_y, test, test_y)
+            print(train, test)
+
+            for j in test.index:
+                copy[i].xs(i)['shot_made_flag'] = #the result after prediction
+
+            copy[i] = copy[i].drop('season', 1)
+            temp_block = pd.concat([temp_block, copy[i]])
+        # break
 
     # for home&away
     # for k,v in seasons_loc_blocks_dict.items():
@@ -488,4 +525,4 @@ seasons_dict, seasons_loc_dict, seasons_mode_dict = split_for_experiments(raw)
 seasons_blocks_dict = split_in_blocks(seasons_dict, 'season')
 all_points = get_all_testing_points(unsorted_raw)
 
-print(seasons_blocks_dict)
+# print(seasons_blocks_dict)
