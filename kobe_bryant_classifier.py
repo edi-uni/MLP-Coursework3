@@ -487,7 +487,7 @@ if __name__ == '__main__':
             print(train, test)
 
             for j in test.index:
-                copy[i].xs(i)['shot_made_flag'] = #the result after prediction
+                copy[i].xs(j)['shot_made_flag'] = #the result after prediction
 
             copy[i] = copy[i].drop('season', 1)
             temp_block = pd.concat([temp_block, copy[i]])
