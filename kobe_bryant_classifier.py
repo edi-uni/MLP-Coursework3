@@ -100,7 +100,23 @@ def split_for_experiments(raw):
         temp_dict = {(k, k2): v2 for k2, v2 in v.groupby('playoffs')}
         seasons_mode_dict.update(temp_dict)
 
-    return seasons_dict, seasons_loc_dict, seasons_mode_dict
+    random_df = df.sample(frac=1, random_state=1)
+    random_df = random_df.drop('season', 1)
+    random_df = random_df.drop('matchup', 1)
+    random_df = random_df.drop('playoffs', 1)
+    block_dim = len(random_df.index) // 200
+    random_df_blocks = []
+    for i in range(200):
+        start = i * block_dim
+        end = (i + 1) * block_dim
+
+        if i != 199:
+            block = random_df.iloc[start:end]
+        else:
+            block = random_df.iloc[start:]
+        random_df_blocks.append(block)
+
+    return seasons_dict, seasons_loc_dict, seasons_mode_dict, random_df_blocks
 
 
 def split_in_blocks(seasons_dict, type):
@@ -212,15 +228,16 @@ def get_all_testing_points(raw):
 
 def split_data(block, all_points, type='default'):
 
-    if type == 'default':
-        block = pd.concat([block, pd.get_dummies(block['season'], prefix='season')], 1)
-        block = block.drop('season', 1)
-    else:
-        block = block.drop('season', 1)
-        if type == 'location':
-            block = block.drop('matchup', 1)
-        elif type == 'mode':
-            block = block.drop('playoffs', 1)
+    if type != 'random':
+        if type == 'default':
+            block = pd.concat([block, pd.get_dummies(block['season'], prefix='season')], 1)
+            block = block.drop('season', 1)
+        else:
+            block = block.drop('season', 1)
+            if type == 'location':
+                block = block.drop('matchup', 1)
+            elif type == 'mode':
+                block = block.drop('playoffs', 1)
 
     indices = block.index.tolist()
     test_points = np.intersect1d(indices, all_points)
@@ -445,7 +462,7 @@ MAIN
 '''
 if __name__ == '__main__':
     raw, unsorted_raw = process_data()
-    seasons_dict, seasons_loc_dict, seasons_mode_dict = split_for_experiments(raw)
+    seasons_dict, seasons_loc_dict, seasons_mode_dict, random_df_blocks = split_for_experiments(raw)
     seasons_blocks_dict = split_in_blocks(seasons_dict, 'season')
     seasons_loc_blocks_dict = split_in_blocks(seasons_loc_dict, 'location')
     seasons_mode_blocks_dict = split_in_blocks(seasons_mode_dict, 'mode')
@@ -453,6 +470,7 @@ if __name__ == '__main__':
     print(seasons_blocks_dict.keys())
     print(seasons_loc_blocks_dict.keys())
     print(seasons_mode_blocks_dict.keys())
+    # print(random_df_blocks)
 
     all_points = get_all_testing_points(unsorted_raw)
     # print(all_points)
@@ -464,6 +482,21 @@ if __name__ == '__main__':
     # dict_keys(['playoff', 'season'])
     ##########
 
+
+    # for random data
+    temp_block = pd.DataFrame()
+    copy = random_df_blocks.copy()
+    for i in range(len(copy)):
+        temp_train, temp_train_y = split_by_field(temp_block)
+        train, train_y, test, test_y = split_data(copy[i], all_points, 'random')
+
+        train = pd.concat([temp_train, train])
+        train_y = pd.concat([temp_train_y, train_y])
+
+        for j in test.index:
+            copy[i].xs(j)['shot_made_flag'] = #the result after prediction
+
+        temp_block = pd.concat([temp_block, copy[i]])
 
 
     # for the entire data
@@ -509,6 +542,7 @@ if __name__ == '__main__':
             copy[i] = copy[i].drop('season', 1)
             temp_block = pd.concat([temp_block, copy[i]])
 
+
     # for home&away
     for k,v in seasons_loc_blocks_dict.items():
         copy = v.copy()
@@ -546,7 +580,6 @@ if __name__ == '__main__':
             temp_block = pd.concat([temp_block, copy[i]])
 
 
-
     # train, train_y, test, test_y = split_data(raw, all_points)
     # best_n, best_m = find_RandomForest_parameters(train)
     # pred_train, pred_test = run_RandomForest(train, train_y, test, best_n, best_m)
@@ -562,8 +595,11 @@ if __name__ == '__main__':
 
 
 raw, unsorted_raw = process_data()
-seasons_dict, seasons_loc_dict, seasons_mode_dict = split_for_experiments(raw)
+seasons_dict, seasons_loc_dict, seasons_mode_dict, random_df_blocks = split_for_experiments(raw)
 seasons_blocks_dict = split_in_blocks(seasons_dict, 'season')
+seasons_loc_blocks_dict = split_in_blocks(seasons_loc_dict, 'location')
+seasons_mode_blocks_dict = split_in_blocks(seasons_mode_dict, 'mode')
+
 all_points = get_all_testing_points(unsorted_raw)
 
 # print(seasons_blocks_dict)
