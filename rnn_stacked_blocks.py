@@ -50,15 +50,14 @@ def season_split():
             print("For seasons value" ,numpy.unique(k),"the BLOCK is", i)
             temp_train, temp_train_y = kb.split_by_field(temp_block)
             train, train_y, test, test_y = kb.split_data(copy[i], all_points, 'season')
-            train = pd.concat([temp_train, train])
-            train_y = pd.concat([temp_train_y, train_y])
-            print("started rnn execution")
-            K.clear_session()
-            print("Session cleared. Starting training")
-            history,testPredict = rnn(train, train_y, test, test_y)	
-
-
-            print("Finished rnn execution")
+            if not test.empty:
+                train = pd.concat([temp_train, train])
+                train_y = pd.concat([temp_train_y, train_y])
+                print("started rnn execution")
+                K.clear_session()
+                print("Session cleared. Starting training")
+                history,testPredict = rnn(train, train_y, test, test_y)	
+                print("Finished rnn execution")
 
             '''
             if len(test_y) > 0 :
@@ -129,7 +128,7 @@ def rnn(train, train_y, test, test_y):
 	model.add(Dense(1))
 	#model.compile(loss='mean_squared_error', optimizer='adam',metrics = ['accuracy'])
 	model.compile(loss='binary_crossentropy', optimizer='adam',metrics = ['accuracy'])
-	history = model.fit(trainX, trainY, epochs=1, batch_size=1, verbose=1,validation_data=(testX,testY))
+	history = model.fit(trainX, trainY, epochs=100, batch_size=100, verbose=1,validation_data=(testX,testY))
 
 	# make predictions
 	trainPredict = model.predict_classes(trainX)
