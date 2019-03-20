@@ -454,6 +454,8 @@ def predictions_result(pred_train, train_y, pred_test, test_y):
     accuracy1 = 100 - np.mean(mape)
     print('Test Accuracy:', round(accuracy1, 2), '%.')
 
+    return accuracy, accuracy1
+
 
 
 '''
@@ -482,6 +484,56 @@ if __name__ == '__main__':
     # dict_keys(['playoff', 'season'])
     ##########
 
+    # RUNNING RANDOM FOREST ON BLOCKS
+    check = 1
+    block_num = 0
+    temp_block = pd.DataFrame()
+    train_acc_array = []
+    test_acc_array = []
+    for k,v in seasons_blocks_dict.items():
+        copy = v.copy()
+        for i in range(len(copy)):
+            block_num+=1
+
+            temp_train, temp_train_y = split_by_field(temp_block)
+            train, train_y, test, test_y = split_data(copy[i], all_points, 'season')
+
+            if check:
+                check = 0
+            else:
+                train = pd.concat([temp_train, train])
+                train_y = pd.concat([temp_train_y, train_y])
+
+
+            print("========================= BLOCK", block_num, "=========================")
+            # print("After concat length:", len(train.index), len(test.index))
+
+
+            if len(test) > 0:
+                best_n, best_m = find_RandomForest_parameters(train)
+                pred_train, pred_test = run_RandomForest(train, train_y, test, best_n, best_m)
+                train_acc, test_acc = predictions_result(pred_train, train_y, pred_test, test_y)
+
+                print(pred_test)
+                print(train_acc, test_acc)
+                train_acc_array.append(train_acc)
+                test_acc_array.append(test_acc)
+
+                k = 0
+                for j in test.index:
+                    copy[i].xs(j)['shot_made_flag'] = pred_test[k]
+                    # print (j, k, copy[i].xs(j)['shot_made_flag'], pred_test[k])
+                    k+=1
+            else:
+                print("No test data!")
+
+            copy[i] = copy[i].drop('season', 1)
+            temp_block = pd.concat([temp_block, copy[i]])
+
+    print("Acc Len Arrays:", len(train_acc_array), len(test_acc_array))
+    print("Acc Average:", sum(train_acc_array)/len(train_acc_array), sum(test_acc_array)/len(test_acc_array))
+
+
 
     # for random data
     temp_block = pd.DataFrame()
@@ -498,25 +550,16 @@ if __name__ == '__main__':
 
         temp_block = pd.concat([temp_block, copy[i]])
 
-
     # for the entire data
     temp_block = pd.DataFrame()
     for k,v in seasons_blocks_dict.items():
         copy = v.copy()
         for i in range(len(copy)):
-            # print("BLOCK", i)
-            # print("Original block length:", len(copy[i].index))
-
             temp_train, temp_train_y = split_by_field(temp_block)
-
             train, train_y, test, test_y = split_data(copy[i], all_points, 'season')
-            # print("After split length:", len(train.index), len(test.index))
-            # print(train, train_y, test, test_y)
 
             train = pd.concat([temp_train, train])
             train_y = pd.concat([temp_train_y, train_y])
-            # print("After concat length:", len(train.index), len(test.index))
-            # print(train, train_y, test, test_y)
 
             for j in test.index:
                 copy[i].xs(j)['shot_made_flag'] = #the result after prediction
@@ -578,11 +621,12 @@ if __name__ == '__main__':
             copy[i] = copy[i].drop('season', 1)
             copy[i] = copy[i].drop('playoffs', 1)
             temp_block = pd.concat([temp_block, copy[i]])
-
+'''
 
     # train, train_y, test, test_y = split_data(raw, all_points)
     # best_n, best_m = find_RandomForest_parameters(train)
     # pred_train, pred_test = run_RandomForest(train, train_y, test, best_n, best_m)
+
 
     # pred_train, pred_test = run_LogisticRegression(train, train_y, test)
 
@@ -591,7 +635,7 @@ if __name__ == '__main__':
 
     # print(train)
     # predictions_result(pred_train, train_y, pred_test, test_y)
-'''
+
 
 
 raw, unsorted_raw = process_data()
